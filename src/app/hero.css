@@ -1,0 +1,107 @@
+/* ---------- Hero: "CARGA COMPLETA" ----------
+   CSS so it runs from first paint, before hydration. html[data-charge="1"] =
+   first visit of the session (inline script in layout.tsx): a thin battery
+   charges 0→100%, an electric pulse sweeps the screen and uncovers the hero.
+   Later visits: one plain fade. --k scales every time (mobile ≈ 25% faster). */
+@property --pct {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 100;
+}
+:root { --k: 1; --cut: cubic-bezier(0.7, 0, 0.2, 1); }
+@media (max-width: 767px) { :root { --k: 0.75; } }
+
+.charge-overlay { display: none; }
+html[data-charge="1"] .charge-overlay {
+  display: grid; place-items: center; position: fixed; inset: 0; z-index: 95; pointer-events: none;
+}
+html[data-charge="done"] .charge-overlay { display: none; }
+.charge-sheet {
+  position: absolute; inset: 0; background: var(--ink);
+  animation: sheet-open calc(0.5s * var(--k)) var(--cut) calc(1.05s * var(--k)) both;
+}
+@keyframes sheet-open { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+.charge-pulse {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 2px;
+  background: var(--volt);
+  box-shadow: 0 0 0 1px rgb(255 204 0 / 0.25);
+  transform: translateX(-4px);
+  animation: pulse-run calc(0.5s * var(--k)) var(--cut) calc(1.05s * var(--k)) both;
+}
+@keyframes pulse-run {
+  0% { transform: translateX(-4px); opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateX(100vw); opacity: 0; }
+}
+.charge-meter {
+  position: relative; z-index: 1; display: grid; justify-items: center; gap: 14px;
+  color: var(--paper);
+  animation: fade-out calc(0.2s * var(--k)) ease-out calc(1.02s * var(--k)) both;
+}
+.charge-cell {
+  position: relative; width: 220px; height: 22px; padding: 3px;
+  border: 1.5px solid rgb(242 242 242 / 0.6); border-radius: 7px;
+}
+.charge-cell::after { /* battery cap */
+  content: ""; position: absolute; right: -7px; top: 6px; width: 4px; height: 8px;
+  border-radius: 0 2px 2px 0; background: rgb(242 242 242 / 0.6);
+}
+.charge-bar {
+  display: block; height: 100%; border-radius: 3px; background: var(--volt);
+  transform-origin: left;
+  animation: charge-fill calc(0.95s * var(--k)) cubic-bezier(0.5, 0, 0.3, 1) calc(0.08s * var(--k)) both;
+}
+@keyframes charge-fill { from { transform: scaleX(0); } }
+.charge-count { font-variant-numeric: tabular-nums; animation: count-up calc(0.95s * var(--k)) cubic-bezier(0.5, 0, 0.3, 1) calc(0.08s * var(--k)) both; counter-reset: pct var(--pct); }
+.charge-count::after { content: counter(pct) "%"; }
+@keyframes count-up { from { --pct: 0; } to { --pct: 100; } }
+@keyframes fade-out { to { opacity: 0; } }
+
+/* -- title: cut reveal per character, keyword lights up like an LED -- */
+.cut-word {
+  display: inline-block; overflow: hidden; vertical-align: bottom; white-space: nowrap;
+  margin-top: -0.3em; padding: 0.3em 0.24em 0.08em 0;
+}
+.cut-word:last-child { padding-right: 0; }
+.cut-char { display: inline-block; }
+html[data-charge="1"] .cut-char {
+  animation: cut-up calc(0.42s * var(--k)) var(--cut) calc(var(--at) * var(--k) * 1s) both;
+}
+@keyframes cut-up { from { transform: translateY(108%); } }
+.kw-led { position: absolute; left: 0; bottom: 0.08em; white-space: nowrap; color: var(--volt); }
+html[data-charge="1"] .kw-led {
+  animation: led-on calc(0.45s * var(--k)) linear calc(var(--at) * var(--k) * 1s) both;
+}
+@keyframes led-on {
+  0% { opacity: 0; } 18% { opacity: 1; } 30% { opacity: 0.15; } 44% { opacity: 1; }
+  56% { opacity: 0.35; } 70%, 100% { opacity: 1; }
+}
+
+/* -- video: a headlight streak crosses once as it appears -- */
+/* starts at 1% (not 0) so the poster still counts as painted for LCP */
+html[data-charge="1"] .hx-video { animation: fade-in-lcp calc(0.5s * var(--k)) ease-out calc(1.1s * var(--k)) both; }
+@keyframes fade-in-lcp { from { opacity: 0.01; } }
+.light-streak {
+  position: absolute; top: 46%; left: 0; width: 60%; height: 18%;
+  background: linear-gradient(90deg, transparent, rgb(255 230 150 / 0.55) 55%, rgb(255 250 230 / 0.9) 70%, transparent);
+  transform: translateX(-110%) skewX(-12deg); opacity: 0; pointer-events: none; mix-blend-mode: screen;
+}
+html[data-charge="1"] .light-streak { animation: streak calc(0.75s * var(--k)) var(--cut) calc(1.3s * var(--k)) both; }
+@keyframes streak {
+  0% { transform: translateX(-110%) skewX(-12deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateX(210%) skewX(-12deg); opacity: 0; }
+}
+
+html[data-charge="1"] .hx-up { animation: hx-rise calc(0.5s * var(--k)) var(--ease) calc(var(--at) * var(--k) * 1s) both; }
+@keyframes hx-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes fade-in { from { opacity: 0; } }
+html:not([data-charge]) .hero-body { animation: fade-in 0.6s ease-out both; }
+
+/* "Role" cue: a charge dot running down a thin cell */
+.scroll-cue-line { position: relative; width: 2px; height: 44px; overflow: hidden; border-radius: 2px; background: rgb(242 242 242 / 0.18); }
+.scroll-cue-line > span { position: absolute; inset: 0; background: var(--volt); animation: cue-drop 1.8s var(--ease) infinite; }
+@keyframes cue-drop { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue-line > span { animation: none; }
+}
